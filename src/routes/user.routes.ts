@@ -28,8 +28,14 @@ userRouter.post("/signup", async (c) => {
         password: validatedBody.password,
       },
     });
+    if (!newUser) {
+      c.status(403);
+      return c.json({
+        error: "Something went wrong while creating your account",
+      });
+    }
     const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
-    return c.text(token);
+    return c.json({ token: token, message: "Signup Successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
       c.status(400);
@@ -48,14 +54,22 @@ userRouter.post("/signin", async (c) => {
     const body = await c.req.json();
     const validatedBody = userSigninValidationSchema.parse(body);
     const user = await prisma.user.findUnique({
-      where: { email: validatedBody.email, password: validatedBody.password },
+      where: { email: validatedBody.email },
     });
     if (!user) {
       c.status(403);
-      return c.json({ error: "user not found" });
+      return c.json({
+        error: "Sorry this account with this email doesnt exsits",
+      });
+    }
+    if (user.password !== validatedBody.password) {
+      c.status(403);
+      return c.json({
+        error: "Wrong password please try again",
+      });
     }
     const token = await sign({ id: user.id }, c?.env.JWT_SECRET);
-    return c.json(token);
+    return c.json({ token: token, message: "Sign in successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
       c.status(400);
