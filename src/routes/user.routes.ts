@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { decode, sign, verify } from "hono/jwt";
 import { z, ZodError } from "zod";
+import bcrypt from "bcryptjs";
 import {
   userSigninValidationSchema,
   userSignupValidationSchema,
@@ -12,6 +13,7 @@ export const userRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
     JWT_SECRET: string;
+    SALT: string;
   };
 }>();
 userRouter.post("/signup", async (c) => {
@@ -21,11 +23,13 @@ userRouter.post("/signup", async (c) => {
   try {
     const body = await c.req.json();
     const validatedBody = userSignupValidationSchema.parse(body);
+    const salt = bcrypt.genSaltSync(Number(c?.env.SALT));
+    const hashedPassword = bcrypt.hashSync(validatedBody.password, salt);
     const newUser = await prisma.user.create({
       data: {
         name: validatedBody.name,
         email: validatedBody.email,
-        password: validatedBody.password,
+        password: hashedPassword,
       },
     });
     if (!newUser) {
@@ -62,7 +66,11 @@ userRouter.post("/signin", async (c) => {
         error: "Sorry this account with this email doesnt exsits",
       });
     }
-    if (user.password !== validatedBody.password) {
+    const isPasswordValid = bcrypt.compareSync(
+      validatedBody.password,
+      user.password
+    );
+    if (!isPasswordValid) {
       c.status(403);
       return c.json({
         error: "Wrong password please try again",
