@@ -3,6 +3,13 @@ import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { decode, sign, verify } from "hono/jwt";
 import { z, ZodError } from "zod";
+import {
+  getCookie,
+  getSignedCookie,
+  setCookie,
+  setSignedCookie,
+  deleteCookie,
+} from "hono/cookie";
 import bcrypt from "bcryptjs";
 import {
   userSigninValidationSchema,
@@ -76,8 +83,12 @@ userRouter.post("/signin", async (c) => {
         error: "Wrong password please try again",
       });
     }
-    const token = await sign({ id: user.id }, c?.env.JWT_SECRET);
-    return c.json({ token: token, message: "Sign in successfull" });
+    const token = await sign(
+      { id: user.id, exp: Math.floor(Date.now() / 1000) + 60 },
+      c?.env.JWT_SECRET
+    );
+    setSignedCookie(c, "token", token, c?.env.JWT_SECRET);
+    return c.json({ message: "Sign in successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
       c.status(400);
@@ -93,24 +104,26 @@ userRouter.post("/me", async (c) => {
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const body = await c.req.json();
-    const validatedBody = userSigninValidationSchema.parse(body);
-    const user = await prisma.user.findUnique({
-      where: { email: validatedBody.email, password: validatedBody.password },
-    });
-    if (!user) {
+    const header = String(c.req.header("Authorization"));
+    const decodedToken = await verify(header, c.env.JWT_SECRET);
+    if (!decodedToken) {
       c.status(403);
-      return c.json({ error: "user not found" });
+      return c.json({ message: "Unauthorized user" });
     }
-    const token = await sign({ id: user.id }, c?.env.JWT_SECRET);
-    return c.json(token);
+    const userId = String(decodedToken.id);
+
+    const foundUser = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!foundUser) {
+      c.status(401);
+      return c.json({ message: "Unauthorized user" });
+    }
   } catch (error) {
-    if (error instanceof ZodError) {
-      c.status(400);
-      return c.json({ errors: error.errors });
-    } else {
-      c.status(500);
-      return c.json({ message: "Something went wrong during signin" });
-    }
+    c.status(400);
+    return c.json({ message: "Unauthorised" });
   }
 });

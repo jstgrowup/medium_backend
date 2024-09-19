@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
+import { getSignedCookie } from "hono/cookie";
 import { decode, sign, verify } from "hono/jwt";
 
 export const blogRouter = new Hono<{
@@ -17,8 +18,8 @@ blogRouter.use("/*", async (c, next) => {
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const header = String(c.req.header("Authorization"));
-    const decodedToken = await verify(header, c.env.JWT_SECRET);
+    const authToken = await getSignedCookie(c, c?.env.JWT_SECRET, "token");
+    const decodedToken = await verify(String(authToken), c.env.JWT_SECRET);
     if (!decodedToken) {
       c.status(403);
       return c.json({ message: "Unauthorized user" });
