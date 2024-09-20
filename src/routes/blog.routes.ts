@@ -3,6 +3,8 @@ import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { getSignedCookie } from "hono/cookie";
 import { decode, sign, verify } from "hono/jwt";
+import { blogValidationSchema } from "../zod-validations/blog.zod";
+import { ZodError } from "zod";
 
 export const blogRouter = new Hono<{
   Bindings: {
@@ -44,20 +46,42 @@ blogRouter.use("/*", async (c, next) => {
   }
 });
 blogRouter.post("/create", async (c) => {
-  const body = await c.req.json();
   const prisma = new PrismaClient({
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
-  const userId = c.get("userId");
-  const post = await prisma.post.create({
-    data: {
-      title: body.title,
-      content: body.content,
-      published: body.published,
-      authorId: userId,
-    },
-  });
-  return c.json({ data: post });
+  try {
+    const body = await c.req.json();
+    const validatedBody = blogValidationSchema.parse(body);
+    const userId = c.get("userId");
+    const post = await prisma.post.create({
+      data: {
+        title: validatedBody.title,
+        content: validatedBody.content,
+        published: validatedBody.published,
+        authorId: userId,
+      },
+    });
+    if (post) {
+      return c.json({ message: "Blog created Successfully" });
+    } else {
+      c.status(401);
+      return c.json({
+        message: "Sorry something went wrong while creating the blog",
+      });
+    }
+  } catch (error) {
+    if (error instanceof ZodError) {
+      c.status(400);
+      return c.json({
+        error: error.errors[0]?.message || "Invalid input",
+      });
+    } else {
+      c.status(500);
+      return c.json({
+        message: "Sorry something went wrong while creating the blog",
+      });
+    }
+  }
 });
 blogRouter.put("/update/:id", async (c) => {
   const prisma = new PrismaClient({
@@ -96,6 +120,7 @@ blogRouter.get("/:id", async (c) => {
         },
       },
     });
+
     console.log("foundBlog:", foundBlog);
     return c.json(foundBlog);
   } catch (error) {

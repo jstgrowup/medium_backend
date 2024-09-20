@@ -21,6 +21,7 @@ export const userRouter = new Hono<{
     DATABASE_URL: string;
     JWT_SECRET: string;
     SALT: string;
+    SERVER_ENV: string;
   };
 }>();
 userRouter.post("/signup", async (c) => {
@@ -46,6 +47,13 @@ userRouter.post("/signup", async (c) => {
       });
     }
     const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
+    setSignedCookie(c, "token", token, c?.env.JWT_SECRET, {
+      httpOnly: true,
+      sameSite: "None",
+      secure: c?.env.SERVER_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
     return c.json({ token: token, message: "Signup Successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -84,10 +92,17 @@ userRouter.post("/signin", async (c) => {
       });
     }
     const token = await sign(
-      { id: user.id, exp: Math.floor(Date.now() / 1000) + 60 },
+      { id: user.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
       c?.env.JWT_SECRET
     );
-    setSignedCookie(c, "token", token, c?.env.JWT_SECRET);
+
+    setSignedCookie(c, "token", token, c?.env.JWT_SECRET, {
+      httpOnly: true,
+      sameSite: "None",
+      secure: c?.env.SERVER_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
     return c.json({ message: "Sign in successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
