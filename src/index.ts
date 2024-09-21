@@ -6,7 +6,7 @@ const app = new Hono();
 app.use(
   "/api/*",
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://medium-frontend-psi.vercel.app"],
     credentials: true,
   })
 );
