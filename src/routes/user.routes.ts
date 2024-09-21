@@ -1,15 +1,9 @@
 import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
-import { decode, sign, verify } from "hono/jwt";
-import { z, ZodError } from "zod";
-import {
-  getCookie,
-  getSignedCookie,
-  setCookie,
-  setSignedCookie,
-  deleteCookie,
-} from "hono/cookie";
+import { sign, verify } from "hono/jwt";
+import { ZodError } from "zod";
+import { setCookie } from "hono/cookie";
 import bcrypt from "bcryptjs";
 import {
   userSigninValidationSchema,
@@ -47,7 +41,7 @@ userRouter.post("/signup", async (c) => {
       });
     }
     const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
-    setSignedCookie(c, "token", token, c?.env.JWT_SECRET, {
+    setCookie(c, "token", token, {
       httpOnly: true,
       sameSite: "None",
       secure: c?.env.SERVER_ENV === "production",
@@ -96,10 +90,10 @@ userRouter.post("/signin", async (c) => {
       c?.env.JWT_SECRET
     );
 
-    setSignedCookie(c, "token", token, c?.env.JWT_SECRET, {
+    setCookie(c, "token", token, {
       httpOnly: true,
       sameSite: "None",
-      secure: c?.env.SERVER_ENV === "production",
+      secure: true,
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });

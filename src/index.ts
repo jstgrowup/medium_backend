@@ -8,6 +8,7 @@ app.use(
   cors({
     origin: ["http://localhost:3000", "https://medium-frontend-psi.vercel.app"],
     credentials: true,
+    allowHeaders: ["Content-Type", "Authorization", "Set-Cookie"],
   })
 );
 app.route("/api/v1/blog", blogRouter);

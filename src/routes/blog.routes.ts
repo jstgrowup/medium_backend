@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
-import { getSignedCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 import { decode, sign, verify } from "hono/jwt";
 import { blogValidationSchema } from "../zod-validations/blog.zod";
 import { ZodError } from "zod";
@@ -20,7 +20,7 @@ blogRouter.use("/*", async (c, next) => {
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const authToken = await getSignedCookie(c, c?.env.JWT_SECRET, "token");
+    const authToken = await getCookie(c, "token");
     const decodedToken = await verify(String(authToken), c.env.JWT_SECRET);
     if (!decodedToken) {
       c.status(403);
