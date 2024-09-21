@@ -9,6 +9,7 @@ import {
   userSigninValidationSchema,
   userSignupValidationSchema,
 } from "../zod-validations/user.zod";
+import { setAuthCookie } from "../services/cookie.service";
 
 export const userRouter = new Hono<{
   Bindings: {
@@ -41,13 +42,8 @@ userRouter.post("/signup", async (c) => {
       });
     }
     const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
-    setCookie(c, "token", token, {
-      httpOnly: true,
-      sameSite: "None",
-      secure: c?.env.SERVER_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    const isProduction = c?.env.SERVER_ENV === "production";
+    setAuthCookie(c, token, isProduction);
     return c.json({ token: token, message: "Signup Successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -89,14 +85,8 @@ userRouter.post("/signin", async (c) => {
       { id: user.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
       c?.env.JWT_SECRET
     );
-
-    setCookie(c, "token", token, {
-      httpOnly: true,
-      sameSite: "None",
-      secure: true,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    const isProduction = c?.env.SERVER_ENV === "production";
+    setAuthCookie(c, token, isProduction);
     return c.json({ message: "Sign in successfull" });
   } catch (error) {
     if (error instanceof ZodError) {
