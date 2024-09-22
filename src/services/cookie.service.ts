@@ -7,7 +7,7 @@ export function setAuthCookie(
 ): void {
   return setCookie(c, "token", token, {
     httpOnly: true,
-    sameSite: "None",
+    sameSite: isProduction ? "None" : "Lax",
     secure: isProduction,
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
