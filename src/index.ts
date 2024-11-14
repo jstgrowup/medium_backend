@@ -12,7 +12,7 @@ app.use(
   "/api/*",
   cors({
     origin: [
-      "https://e778-2405-201-a808-581a-398f-6d72-9053-9602.ngrok-free.app",
+      "https://969d-2405-201-a808-581a-b516-afda-acb2-8b6b.ngrok-free.app",
       "http://localhost:3000",
       "https://medium-frontend-psi.vercel.app",
     ],

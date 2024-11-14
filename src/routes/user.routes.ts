@@ -110,9 +110,7 @@ userRouter.post("/signin", async (c) => {
       { id: user.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
       c?.env.JWT_SECRET
     );
-    const isProduction = c?.env.SERVER_ENV === "production";
-    setAuthCookie(c, token, isProduction);
-    return c.json({ message: "Sign in successfull" });
+    return c.json({ message: "Sign in successfull", token });
   } catch (error) {
     if (error instanceof ZodError) {
       c.status(400);

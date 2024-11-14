@@ -6,7 +6,7 @@ export function setAuthCookie(
   isProduction: boolean
 ): void {
   return setCookie(c, "token", token, {
-    httpOnly: true,
+    httpOnly: false,
     sameSite: isProduction ? "None" : "Lax",
     secure: isProduction,
     path: "/",
