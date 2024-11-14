@@ -14,11 +14,12 @@ datasource db {
 }
 
 model User {
-  id       String  @id @default(uuid())
-  email    String  @unique
-  name     String?
-  password String
-  posts    Post[]
+  id            String  @id @default(uuid())
+  email         String  @unique
+  password      String
+  posts         Post[]
+  emailVerified Boolean @default(false)
+  name          String?
 }
 
 model Post {

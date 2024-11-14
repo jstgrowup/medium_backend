@@ -10,6 +10,7 @@ import {
   userSignupValidationSchema,
 } from "../zod-validations/user.zod";
 import { setAuthCookie } from "../services/cookie.service";
+import { sendEmail } from "../services/email.service";
 
 export const userRouter = new Hono<{
   Bindings: {
@@ -17,6 +18,8 @@ export const userRouter = new Hono<{
     JWT_SECRET: string;
     SALT: string;
     SERVER_ENV: string;
+    RESEND_KEY: string;
+    FRONTEND_URL: string;
   };
 }>();
 userRouter.post("/signup", async (c) => {
@@ -26,11 +29,21 @@ userRouter.post("/signup", async (c) => {
   try {
     const body = await c.req.json();
     const validatedBody = userSignupValidationSchema.parse(body);
+    const foundUser = await prisma.user.findUnique({
+      where: {
+        email: validatedBody.email,
+        emailVerified: true,
+      },
+    });
+    if (foundUser) {
+      return c.json({
+        error: "Account already exists please signin",
+      });
+    }
     const salt = bcrypt.genSaltSync(Number(c?.env.SALT));
     const hashedPassword = bcrypt.hashSync(validatedBody.password, salt);
     const newUser = await prisma.user.create({
       data: {
-        name: validatedBody.name,
         email: validatedBody.email,
         password: hashedPassword,
       },
@@ -42,10 +55,22 @@ userRouter.post("/signup", async (c) => {
       });
     }
     const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
+    const magicLink = `${c?.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`;
     const isProduction = c?.env.SERVER_ENV === "production";
     setAuthCookie(c, token, isProduction);
-    return c.json({ token: token, message: "Signup Successfull" });
+    await sendEmail({
+      to: newUser.email,
+      subject: "Email verification",
+      htmlContent: `<p>Congrats on sending your <strong>first email</strong>!</p><a>${magicLink}</a>`,
+      from: "onboarding@resend.dev",
+      resendKey: c?.env.RESEND_KEY,
+    });
+    return c.json({
+      message: "Signup Successfull please check the email",
+      data: { ...newUser, authType: "signup", accessToken: token },
+    });
   } catch (error) {
+    console.log("error:", error);
     if (error instanceof ZodError) {
       c.status(400);
       return c.json({ errors: error.errors });

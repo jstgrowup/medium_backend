@@ -10,6 +10,7 @@ export const blogRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
     JWT_SECRET: string;
+    RESEND_KEY: string;
   };
   Variables: {
     userId: string;
@@ -20,8 +21,9 @@ blogRouter.use("/*", async (c, next) => {
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const authToken = await getCookie(c, "token");
-    const decodedToken = await verify(String(authToken), c.env.JWT_SECRET);
+    const authHeader = c.req.header("Cookie");
+    const authToken = authHeader?.split("=")[1];
+    const decodedToken = await verify(authToken ?? "", c.env.JWT_SECRET);
     if (!decodedToken) {
       c.status(403);
       return c.json({ message: "Unauthorized user" });
