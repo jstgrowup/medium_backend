@@ -21,8 +21,8 @@ blogRouter.use("/*", async (c, next) => {
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const authHeader = c.req.header("Cookie");
-    const authToken = authHeader?.split("=")[1];
+    const authHeader = c.req.header("authorization");
+    const authToken = authHeader?.split(" ")[1];
     const decodedToken = await verify(authToken ?? "", c.env.JWT_SECRET);
     if (!decodedToken) {
       c.status(403);
