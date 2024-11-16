@@ -14,12 +14,14 @@ datasource db {
 }
 
 model User {
-  id            String  @id @default(uuid())
-  email         String  @unique
+  id            String     @id @default(uuid())
+  email         String     @unique
   password      String
   posts         Post[]
-  emailVerified Boolean @default(false)
+  emailVerified Boolean    @default(false)
   name          String?
+  followers     Follower[] @relation("followers")
+  following     Follower[] @relation("following")
 }
 
 model Post {
@@ -31,4 +33,13 @@ model Post {
   published Boolean  @default(false)
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
+}
+
+model Follower {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("followers", fields: [followerId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
 }
