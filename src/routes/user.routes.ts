@@ -46,6 +46,7 @@ userRouter.post("/signup", async (c) => {
       data: {
         email: validatedBody.email,
         password: hashedPassword,
+        name: validatedBody.name,
       },
     });
     if (!newUser) {
@@ -54,10 +55,11 @@ userRouter.post("/signup", async (c) => {
         error: "Something went wrong while creating your account",
       });
     }
-    const token = await sign({ id: newUser.id }, c?.env.JWT_SECRET);
+    const token = await sign(
+      { id: newUser.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
+      c?.env.JWT_SECRET
+    );
     const magicLink = `${c?.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`;
-    const isProduction = c?.env.SERVER_ENV === "production";
-    setAuthCookie(c, token, isProduction);
     await sendEmail({
       to: newUser.email,
       subject: "Email verification",
@@ -65,12 +67,8 @@ userRouter.post("/signup", async (c) => {
       from: "onboarding@resend.dev",
       resendKey: c?.env.RESEND_KEY,
     });
-    return c.json({
-      message: "Signup Successfull please check the email",
-      data: { ...newUser, authType: "signup", accessToken: token },
-    });
+    return c.json({ message: "Sign up successfull", token });
   } catch (error) {
-    console.log("error:", error);
     if (error instanceof ZodError) {
       c.status(400);
       return c.json({ errors: error.errors });

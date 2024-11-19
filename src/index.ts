@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { userRouter } from "./routes/user.routes";
 import { blogRouter } from "./routes/blog.routes";
 import { cors } from "hono/cors";
+import { followRouter } from "./routes/follow.route";
 const app = new Hono<{
   Bindings: {
     FRONTEND_URL: string;
@@ -12,7 +13,7 @@ app.use(
   "/api/*",
   cors({
     origin: [
-      "https://d264-2405-201-a808-581a-59e1-10b5-3ac2-ad4a.ngrok-free.app",
+      "https://9f41-2405-201-a808-581a-59d-6bd5-7cb2-6c95.ngrok-free.app",
       "http://localhost:3000",
       "https://medium-frontend-psi.vercel.app",
     ],
@@ -22,5 +23,6 @@ app.use(
 );
 app.route("/api/v1/blog", blogRouter);
 app.route("/api/v1/user", userRouter);
+app.route("/api/v1/follow", followRouter);
 
 export default app;

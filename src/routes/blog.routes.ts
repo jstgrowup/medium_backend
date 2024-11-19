@@ -29,7 +29,6 @@ blogRouter.use("/*", async (c, next) => {
       return c.json({ message: "Unauthorized user" });
     }
     const userId = String(decodedToken.id);
-
     const foundUser = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -149,19 +148,6 @@ blogRouter.get("/get/bulk", async (c) => {
     });
 
     return c.json({ data: foundBlogs });
-  } catch (error) {
-    c.status(411);
-    return c.json({
-      message: "something went wrong while getting hte blog post",
-    });
-  }
-});
-blogRouter.get("/followers-recommendations", async (c) => {
-  const prisma = new PrismaClient({
-    datasourceUrl: c?.env.DATABASE_URL,
-  }).$extends(withAccelerate());
-  try {
-    return;
   } catch (error) {
     c.status(411);
     return c.json({
