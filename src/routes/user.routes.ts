@@ -119,13 +119,14 @@ userRouter.post("/signin", async (c) => {
     }
   }
 });
-userRouter.post("/me", async (c) => {
+userRouter.get("/me", async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl: c?.env.DATABASE_URL,
   }).$extends(withAccelerate());
   try {
-    const header = String(c.req.header("Authorization"));
-    const decodedToken = await verify(header, c.env.JWT_SECRET);
+    const authHeader = String(c.req.header("authorization"));
+    const authToken = authHeader?.split(" ")[1];
+    const decodedToken = await verify(authToken, c.env.JWT_SECRET);
     if (!decodedToken) {
       c.status(403);
       return c.json({ message: "Unauthorized user" });
@@ -136,12 +137,18 @@ userRouter.post("/me", async (c) => {
       where: {
         id: userId,
       },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     });
 
     if (!foundUser) {
       c.status(401);
       return c.json({ message: "Unauthorized user" });
     }
+    return c.json({ data: foundUser });
   } catch (error) {
     c.status(400);
     return c.json({ message: "Unauthorised" });
