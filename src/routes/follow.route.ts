@@ -84,3 +84,32 @@ followRouter.get("/recommendations", async (c) => {
     });
   }
 });
+
+followRouter.post("/follow", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c?.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+  try {
+    const body = await c.req.json();
+    const { followingId } = body;
+    const followerId = c.get("userId");
+    const existingFollow = await prisma.follower.findFirst({
+      where: { followerId, followingId },
+    });
+    if (existingFollow) {
+      await prisma.follower.delete({
+        where: { id: existingFollow.id },
+      });
+      return c.json({ message: "Unfollowed successfully" });
+    }
+    await prisma.follower.create({
+      data: { followerId, followingId },
+    });
+    return c.json({ message: "Followed successfully" });
+  } catch (error) {
+    c.status(411);
+    return c.json({
+      message: "something went wrong while getting hte blog post",
+    });
+  }
+});
