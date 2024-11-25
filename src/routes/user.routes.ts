@@ -105,7 +105,7 @@ userRouter.post("/signin", async (c) => {
       });
     }
     const token = await sign(
-      { id: user.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
+      { id: user.id, exp: Math.floor(Date.now() / 1000) + 60 * 60 },
       c?.env.JWT_SECRET
     );
     return c.json({ message: "Sign in successfull", token });
