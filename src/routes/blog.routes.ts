@@ -59,6 +59,7 @@ blogRouter.post("/create", async (c) => {
         title: validatedBody.title,
         content: validatedBody.content,
         published: validatedBody.published,
+        imageUrl: validatedBody.imageUrl,
         authorId: userId,
       },
     });
@@ -139,6 +140,7 @@ blogRouter.get("/get/bulk", async (c) => {
         content: true,
         title: true,
         id: true,
+        imageUrl: true,
         author: {
           select: {
             name: true,

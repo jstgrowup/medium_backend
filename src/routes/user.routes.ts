@@ -3,15 +3,13 @@ import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { sign, verify } from "hono/jwt";
 import { ZodError } from "zod";
-import { setCookie } from "hono/cookie";
 import bcrypt from "bcryptjs";
 import {
+  userProfilePicValidationSchema,
   userSigninValidationSchema,
   userSignupValidationSchema,
 } from "../zod-validations/user.zod";
-import { setAuthCookie } from "../services/cookie.service";
 import { sendEmail } from "../services/email.service";
-
 export const userRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
@@ -141,6 +139,7 @@ userRouter.get("/me", async (c) => {
         id: true,
         name: true,
         email: true,
+        profilePic: true,
       },
     });
 
@@ -149,6 +148,40 @@ userRouter.get("/me", async (c) => {
       return c.json({ message: "Unauthorized user" });
     }
     return c.json({ data: foundUser });
+  } catch (error) {
+    c.status(400);
+    return c.json({ message: "Unauthorised" });
+  }
+});
+userRouter.post("/update/profile-picture", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c?.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+  try {
+    const authHeader = String(c.req.header("authorization"));
+    const authToken = authHeader?.split(" ")[1];
+    const body = await c.req.json();
+    const validatedBody = userProfilePicValidationSchema.parse(body);
+    const decodedToken = await verify(authToken, c.env.JWT_SECRET);
+    if (!decodedToken) {
+      c.status(403);
+      return c.json({ message: "Unauthorized user" });
+    }
+    const userId = String(decodedToken.id);
+    const updatedUserWithProfilePic = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        profilePic: validatedBody.imageUrl,
+      },
+    });
+
+    if (!updatedUserWithProfilePic) {
+      c.status(401);
+      return c.json({ message: "Something went wrong" });
+    }
+    return c.json({ message: "Profile picture updated successfully" });
   } catch (error) {
     c.status(400);
     return c.json({ message: "Unauthorised" });
