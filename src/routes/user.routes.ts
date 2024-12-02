@@ -140,6 +140,8 @@ userRouter.get("/me", async (c) => {
         name: true,
         email: true,
         profilePic: true,
+        role: true,
+        about: true,
       },
     });
 
@@ -174,6 +176,39 @@ userRouter.post("/update/profile-picture", async (c) => {
       },
       data: {
         profilePic: validatedBody.imageUrl,
+      },
+    });
+
+    if (!updatedUserWithProfilePic) {
+      c.status(401);
+      return c.json({ message: "Something went wrong" });
+    }
+    return c.json({ message: "Profile picture updated successfully" });
+  } catch (error) {
+    c.status(400);
+    return c.json({ message: "Unauthorised" });
+  }
+});
+userRouter.post("/update/profile", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c?.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+  try {
+    const authHeader = String(c.req.header("authorization"));
+    const authToken = authHeader?.split(" ")[1];
+    const body = await c.req.json();
+    const decodedToken = await verify(authToken, c.env.JWT_SECRET);
+    if (!decodedToken) {
+      c.status(403);
+      return c.json({ message: "Unauthorized user" });
+    }
+    const userId = String(decodedToken.id);
+    const updatedUserWithProfilePic = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        ...body,
       },
     });
 
