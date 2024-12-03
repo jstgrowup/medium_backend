@@ -216,7 +216,7 @@ userRouter.post("/update/profile", async (c) => {
       c.status(401);
       return c.json({ message: "Something went wrong" });
     }
-    return c.json({ message: "Profile picture updated successfully" });
+    return c.json({ message: "Profile  Updated Successfully" });
   } catch (error) {
     c.status(400);
     return c.json({ message: "Unauthorised" });
