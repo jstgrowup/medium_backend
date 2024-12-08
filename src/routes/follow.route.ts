@@ -1,11 +1,7 @@
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
-import { getCookie } from "hono/cookie";
-import { decode, sign, verify } from "hono/jwt";
-import { blogValidationSchema } from "../zod-validations/blog.zod";
-import { ZodError } from "zod";
-
+import { verify } from "hono/jwt";
 export const followRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
@@ -46,7 +42,6 @@ followRouter.use("/*", async (c, next) => {
     return c.json({ message: "Unauthorized user" });
   }
 });
-
 followRouter.get("/recommendations", async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl: c?.env.DATABASE_URL,
@@ -84,7 +79,6 @@ followRouter.get("/recommendations", async (c) => {
     });
   }
 });
-
 followRouter.post("/follow", async (c) => {
   const prisma = new PrismaClient({
     datasourceUrl: c?.env.DATABASE_URL,

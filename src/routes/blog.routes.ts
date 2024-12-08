@@ -1,11 +1,9 @@
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
-import { getCookie } from "hono/cookie";
-import { decode, sign, verify } from "hono/jwt";
+import { verify } from "hono/jwt";
 import { blogValidationSchema } from "../zod-validations/blog.zod";
 import { ZodError } from "zod";
-
 export const blogRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;

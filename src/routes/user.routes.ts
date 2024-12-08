@@ -17,7 +17,10 @@ export const userRouter = new Hono<{
     SALT: string;
     SERVER_ENV: string;
     RESEND_KEY: string;
-    FRONTEND_URL: string;
+    DEV_FRONTEND_URL: string;
+    DEV_BACKEND_URL: string;
+    PROD_FRONTEND_URL: string;
+    PROD_BACKEND_URL: string;
   };
 }>();
 userRouter.post("/signup", async (c) => {
@@ -57,7 +60,11 @@ userRouter.post("/signup", async (c) => {
       { id: newUser.id, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
       c?.env.JWT_SECRET
     );
-    const magicLink = `${c?.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`;
+    const frontendUrl =
+      c?.env.SERVER_ENV === "dev"
+        ? c?.env.DEV_BACKEND_URL
+        : c?.env.PROD_BACKEND_URL;
+    const magicLink = `${frontendUrl}/api/verify-email?token=${token}`;
     await sendEmail({
       to: newUser.email,
       subject: "Email verification",
@@ -65,7 +72,9 @@ userRouter.post("/signup", async (c) => {
       from: "onboarding@resend.dev",
       resendKey: c?.env.RESEND_KEY,
     });
-    return c.json({ message: "Sign up successfull", token });
+    return c.json({
+      message: "Sign up successfull please check your email to verify",
+    });
   } catch (error) {
     if (error instanceof ZodError) {
       c.status(400);
@@ -217,6 +226,31 @@ userRouter.post("/update/profile", async (c) => {
       return c.json({ message: "Something went wrong" });
     }
     return c.json({ message: "Profile  Updated Successfully" });
+  } catch (error) {
+    c.status(400);
+    return c.json({ message: "Unauthorised" });
+  }
+});
+userRouter.get("/verify-email", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c?.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+  try {
+    const url = new URL(c.req.url);
+    const authToken = url.searchParams.get("token") as string;
+    const decodedToken = await verify(authToken, c.env.JWT_SECRET);
+    const userId: string = decodedToken.id as string;
+    const updatedVerifiedEmail = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerified: true,
+      },
+    });
+    if (!updatedVerifiedEmail) {
+      c.status(403);
+      return c.json({ message: "Unauthorized user" });
+    }
+    return c.json({ message: "Email verified Successfully" });
   } catch (error) {
     c.status(400);
     return c.json({ message: "Unauthorised" });
