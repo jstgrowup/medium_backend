@@ -62,13 +62,20 @@ userRouter.post("/signup", async (c) => {
     );
     const frontendUrl =
       c?.env.SERVER_ENV === "dev"
-        ? c?.env.DEV_BACKEND_URL
-        : c?.env.PROD_BACKEND_URL;
+        ? c?.env.DEV_FRONTEND_URL
+        : c?.env.PROD_FRONTEND_URL;
+
     const magicLink = `${frontendUrl}/api/verify-email?token=${token}`;
     await sendEmail({
       to: newUser.email,
       subject: "Email verification",
-      htmlContent: `<p>Congrats on sending your <strong>first email</strong>!</p><a>${magicLink}</a>`,
+      htmlContent: `
+      <p>Congrats on sending your <strong>first email</strong>!</p>
+      <p>
+        Please click the link below to verify your email:
+      </p>
+      <a href="${magicLink}" target="_blank">Verify Email</a>
+    `,
       from: "onboarding@resend.dev",
       resendKey: c?.env.RESEND_KEY,
     });
@@ -91,10 +98,17 @@ userRouter.post("/signin", async (c) => {
   }).$extends(withAccelerate());
   try {
     const body = await c.req.json();
+
     const validatedBody = userSigninValidationSchema.parse(body);
     const user = await prisma.user.findUnique({
       where: { email: validatedBody.email },
     });
+    if (!user?.emailVerified) {
+      c.status(403);
+      return c.json({
+        error: "This email is not verified please verify your email",
+      });
+    }
     if (!user) {
       c.status(403);
       return c.json({
