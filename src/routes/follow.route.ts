@@ -67,6 +67,8 @@ followRouter.get("/recommendations", async (c) => {
       select: {
         id: true,
         name: true,
+        profilePic: true,
+        role: true,
       },
       take: 10,
     });
