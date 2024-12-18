@@ -139,3 +139,39 @@ followRouter.get("/followers/details", async (c) => {
     });
   }
 });
+followRouter.get("/followers/details/:id", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c?.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+  try {
+    const userId = c.get("userId");
+    const profileId = c.req.param("id");
+    const [followerCount, followingCount, postCount, isFollowing] =
+      await Promise.all([
+        prisma.follower.count({
+          where: { followingId: profileId },
+        }),
+        prisma.follower.count({
+          where: { followerId: profileId },
+        }),
+        prisma.post.count({
+          where: { authorId: profileId },
+        }),
+        prisma.follower.count({
+          where: { followingId: profileId, followerId: userId },
+        }),
+      ]);
+
+    return c.json({
+      followerCount,
+      followingCount,
+      postCount,
+      isFollowing,
+    });
+  } catch (error) {
+    c.status(411);
+    return c.json({
+      message: "something went wrong while getting hte blog post",
+    });
+  }
+});
